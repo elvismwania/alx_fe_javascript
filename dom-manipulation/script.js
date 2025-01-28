@@ -7,12 +7,16 @@ const quoteList = document.getElementById('quoteList');
 const exportJSONButton = document.getElementById('exportJSON');
 const importJSONInput = document.getElementById('importJSON');
 
-let quotes = [];
+// Load quotes from localStorage on page load
+let quotes = loadQuotesFromLocalStorage();
 
 function showRandomQuote() {
   const randomIndex = Math.floor(Math.random() * quotes.length);
   const quote = quotes[randomIndex];
   quoteDisplay.innerHTML = quote.text;
+
+  // Store the last viewed quote index in sessionStorage (optional)
+  sessionStorage.setItem('lastViewedQuoteIndex', randomIndex);
 }
 
 function addQuote(event) {
@@ -42,7 +46,11 @@ function createAddQuoteForm() {
 
 function loadQuotesFromLocalStorage() {
   const storedQuotes = localStorage.getItem('quotes');
-  return storedQuotes ? JSON.parse(storedQuotes) : [];
+  return storedQuotes? JSON.parse(storedQuotes): [
+    { text: "The only way to do great work is to love what you do.", category: "Inspirational" },
+    { text: "The mind is everything. What you think you become.", category: "Mindfulness" }
+    //... more initial quotes if needed
+  ];
 }
 
 function saveQuotesToLocalStorage() {
@@ -51,7 +59,7 @@ function saveQuotesToLocalStorage() {
 
 function exportToJSON() {
   const jsonString = JSON.stringify(quotes);
-  const blob = new Blob([jsonString], { type: 'text/json' });
+  const blob = new Blob([jsonString], { type: 'application/json' }); // Corrected line
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
@@ -60,11 +68,11 @@ function exportToJSON() {
 }
 
 function importFromJsonFile(event) {
-  const file = event.target.files[0];
+  const file = event.target.files;
   const reader = new FileReader();
   reader.onload = function(event) {
     const importedQuotes = JSON.parse(event.target.result);
-    quotes.push(...importedQuotes);
+    quotes.push(...importedQuotes); // Use spread operator to add imported quotes
     saveQuotesToLocalStorage();
     // Optionally update the displayed quote list
   };
@@ -73,13 +81,11 @@ function importFromJsonFile(event) {
 
 newQuoteButton.addEventListener('click', showRandomQuote);
 createAddQuoteForm();
+exportJSONButton.addEventListener('click', exportToJSON);
+importJSONInput.addEventListener('change', importFromJsonFile);
 
 // Optionally, display the last viewed quote when the page loads
 const lastViewedIndex = sessionStorage.getItem('lastViewedQuoteIndex');
-if (lastViewedIndex !== null) {
+if (lastViewedIndex!== null) {
   quoteDisplay.innerHTML = quotes[lastViewedIndex].text;
 }
-
-// Initialize export and import buttons
-exportJSONButton.addEventListener('click', exportToJSON);
-importJSONInput.addEventListener('change', importFromJsonFile);
