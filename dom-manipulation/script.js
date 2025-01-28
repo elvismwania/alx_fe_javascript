@@ -13,7 +13,7 @@ let quotes = [
 function showRandomQuote() {
   const randomIndex = Math.floor(Math.random() * quotes.length);
   const quote = quotes[randomIndex];
-  quoteDisplay.textContent = quote.text;
+  quoteDisplay.innerHTML = quote.text; // Corrected line
 }
 
 function addQuote() {
@@ -22,10 +22,8 @@ function addQuote() {
     category: newQuoteCategory.value
   };
   quotes.push(newQuote);
-  // Clear the input fields
   newQuoteText.value = "";
   newQuoteCategory.value = "";
-  // Optionally display a success message or update the quote display
 }
 
 newQuoteButton.addEventListener('click', showRandomQuote);
