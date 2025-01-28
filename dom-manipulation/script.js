@@ -2,7 +2,8 @@ const quoteDisplay = document.getElementById('quoteDisplay');
 const newQuoteButton = document.getElementById('newQuote');
 const newQuoteText = document.getElementById('newQuoteText');
 const newQuoteCategory = document.getElementById('newQuoteCategory');
-const quoteForm = document.getElementById('add-quote-form'); // Get the form element
+const quoteForm = document.getElementById('add-quote-form');
+const quoteList = document.getElementById('quoteList');
 
 let quotes = [
   { text: "The only way to do great work is to love what you do.", category: "Inspirational" },
@@ -17,7 +18,7 @@ function showRandomQuote() {
 }
 
 function addQuote(event) {
-  event.preventDefault(); // Prevent default form submission
+  event.preventDefault();
 
   const newQuote = {
     text: newQuoteText.value,
@@ -26,6 +27,14 @@ function addQuote(event) {
   quotes.push(newQuote);
   newQuoteText.value = "";
   newQuoteCategory.value = "";
+
+  addQuoteToList(newQuote);
+}
+
+function addQuoteToList(quote) {
+  const listItem = document.createElement('li');
+  listItem.textContent = `${quote.text} (${quote.category})`;
+  quoteList.appendChild(listItem);
 }
 
 function createAddQuoteForm() {
@@ -33,4 +42,4 @@ function createAddQuoteForm() {
 }
 
 newQuoteButton.addEventListener('click', showRandomQuote);
-createAddQuoteForm(); // Call the function to set up the form submission handling
+createAddQuoteForm();
