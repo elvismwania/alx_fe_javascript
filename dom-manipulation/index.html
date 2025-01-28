@@ -17,6 +17,11 @@
   </form>
 
   <h2>Added Quotes</h2>
-  <ul id="quoteList"></ul> <script src="script.js"></script>
+  <ul id="quoteList"></ul> 
+
+  <button id="exportJSON">Export to JSON</button>
+  <input type="file" id="importJSON" accept=".json" onchange="importFromJsonFile(event)" />
+
+  <script src="script.js"></script>
 </body>
 </html>
