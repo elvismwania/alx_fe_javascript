@@ -238,11 +238,11 @@ async function syncQuotes() {
     }
   }
 
-  // Display sync status
+  // Display sync status (using alert)
   if (conflictsResolved) {
-    syncStatus.textContent = 'Last sync: ' + new Date().toLocaleString() + ' (Conflicts resolved)';
+    alert('Quotes synced with server! (Conflicts resolved)');
   } else {
-    syncStatus.textContent = 'Last sync: ' + new Date().toLocaleString();
+    alert('Quotes synced with server!');
   }
 
   lastSyncTimestamp = Date.now();
