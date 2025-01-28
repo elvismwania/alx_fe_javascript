@@ -6,13 +6,17 @@ const quoteForm = document.getElementById('add-quote-form');
 const quoteList = document.getElementById('quoteList');
 const exportJSONButton = document.getElementById('exportJSON');
 const importJSONInput = document.getElementById('importJSON');
-const categoryFilter = document.getElementById('categoryFilter'); // Get the filter dropdown
+const categoryFilter = document.getElementById('categoryFilter');
+const syncStatus = document.getElementById('syncStatus'); // Get the sync status div
+
+const apiEndpoint = 'https://jsonplaceholder.typicode.com/posts'; // JSONPlaceholder endpoint
 
 // Load quotes from localStorage on page load
 let quotes = loadQuotesFromLocalStorage();
+let lastSyncTimestamp = localStorage.getItem('lastSyncTimestamp') || 0;
 
 function showRandomQuote() {
-  const selectedCategory = categoryFilter.value; // Get the selected category
+  const selectedCategory = categoryFilter.value;
   const filteredQuotes = selectedCategory === 'all'
   ? quotes
   : quotes.filter(quote => quote.category === selectedCategory);
@@ -61,8 +65,8 @@ function createAddQuoteForm() {
 function loadQuotesFromLocalStorage() {
   const storedQuotes = localStorage.getItem('quotes');
   return storedQuotes? JSON.parse(storedQuotes): [
-    { text: "The only way to do great work is to love what you do.", category: "Inspirational" },
-    { text: "The mind is everything. What you think you become.", category: "Mindfulness" }
+    { text: "The only way to do great work is to love what you do.", category: "Inspirational", lastModified: Date.now() },
+    { text: "The mind is everything. What you think you become.", category: "Mindfulness", lastModified: Date.now() }
     //... more initial quotes if needed
   ];
 }
@@ -117,20 +121,138 @@ function filterQuotes() {
   ? quotes
   : quotes.filter(quote => quote.category === selectedCategory);
 
-  // Update the displayed quotes (You'll need to adjust this based on how you're displaying quotes)
-  // For example, if you're using quoteList to display a list of quotes:
-  quoteList.innerHTML = ''; // Clear the current list
+  // Update the displayed quotes
+  quoteList.innerHTML = '';
   filteredQuotes.forEach(quote => {
     const listItem = document.createElement('li');
     listItem.textContent = `${quote.text} (${quote.category})`;
     quoteList.appendChild(listItem);
   });
 
-  // If you're only displaying a single quote at a time, you might update quoteDisplay.innerHTML instead.
-
   // Store the selected category in localStorage
   localStorage.setItem('lastSelectedCategory', selectedCategory);
 }
+
+// Fetch quotes from server (using JSONPlaceholder)
+async function fetchQuotesFromServer() {
+  try {
+    const response = await fetch(apiEndpoint);
+    const data = await response.json();
+    // Adapt the data to match your quote format
+    return data.map(post => ({
+      id: post.id,
+      text: post.title, // Using title as quote text
+      category: 'General', // You might need to adjust this
+      lastModified: Date.now() - Math.floor(Math.random() * 1000000) // Simulate different timestamps
+    }));
+  } catch (error) {
+    console.error('Error fetching quotes:', error);
+    return;
+  }
+}
+
+// Send new quote to server (using JSONPlaceholder)
+async function sendNewQuoteToServer(newQuote) {
+  try {
+    const response = await fetch(apiEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        title: newQuote.text, // Adapt to JSONPlaceholder format
+        body: '...', // You might need to adjust this
+        userId: 1 // You might need to adjust this
+      })
+    });
+    const data = await response.json();
+    // Adapt the response to match your quote format
+    return {
+      id: data.id,
+      text: data.title,
+      category: newQuote.category,
+      lastModified: Date.now()
+    };
+  } catch (error) {
+    console.error('Error sending quote:', error);
+    return null;
+  }
+}
+
+// Update quote on server (using JSONPlaceholder - you might need to adapt this)
+async function updateQuoteOnServer(quote) {
+  try {
+    const response = await fetch(`${apiEndpoint}/${quote.id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        id: quote.id,
+        title: quote.text, // Adapt to JSONPlaceholder format
+        body: '...', // You might need to adjust this
+        userId: 1 // You might need to adjust this
+      })
+    });
+    const data = await response.json();
+    // Adapt the response to match your quote format
+    return {
+      id: data.id,
+      text: data.title,
+      category: quote.category,
+      lastModified: Date.now()
+    };
+  } catch (error) {
+    console.error('Error updating quote:', error);
+    return null;
+  }
+}
+
+// Sync quotes with server
+async function syncQuotes() {
+  const serverQuotes = await fetchQuotesFromServer();
+  let conflictsResolved = false;
+
+  // 1. Add new local quotes to server
+  const newLocalQuotes = quotes.filter(localQuote =>!localQuote.id);
+  for (const newQuote of newLocalQuotes) {
+    const addedQuote = await sendNewQuoteToServer(newQuote);
+    if (addedQuote) {
+      newQuote.id = addedQuote.id;
+      newQuote.lastModified = addedQuote.lastModified;
+    }
+  }
+
+  // 2. Update existing quotes (conflict resolution - server wins)
+  for (const serverQuote of serverQuotes) {
+    const localQuote = quotes.find(localQuote => localQuote.id === serverQuote.id);
+    if (localQuote) {
+      if (localQuote.lastModified < serverQuote.lastModified) {
+        // Server quote is newer, update local
+        const index = quotes.indexOf(localQuote);
+        quotes[index] = serverQuote;
+        conflictsResolved = true;
+      }
+    } else {
+      quotes.push(serverQuote);
+    }
+  }
+
+  // Display sync status
+  if (conflictsResolved) {
+    syncStatus.textContent = 'Last sync: ' + new Date().toLocaleString() + ' (Conflicts resolved)';
+  } else {
+    syncStatus.textContent = 'Last sync: ' + new Date().toLocaleString();
+  }
+
+  lastSyncTimestamp = Date.now();
+  localStorage.setItem('lastSyncTimestamp', lastSyncTimestamp);
+  saveQuotesToLocalStorage();
+  populateCategories();
+}
+
+// Call syncQuotes periodically (e.g., every 5 seconds)
+setInterval(syncQuotes, 5000);
 
 // Event listeners
 newQuoteButton.addEventListener('click', showRandomQuote);
@@ -139,7 +261,7 @@ exportJSONButton.addEventListener('click', exportToJSON);
 importJSONInput.addEventListener('change', importFromJsonFile);
 categoryFilter.addEventListener('change', () => {
   filterQuotes();
-  showRandomQuote(); // Update the displayed quote after filtering
+  showRandomQuote();
 });
 
 // Call populateCategories initially to populate the filter options
